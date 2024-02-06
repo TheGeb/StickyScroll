@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.Inlay;
 import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.openapi.editor.colors.EditorColors;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
@@ -31,12 +32,20 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.lang.ref.WeakReference;
+import java.util.function.Predicate;
 
-public final class MyEditorFragmentComponent extends JPanel {
+/**
+ * test
+ */
+@SuppressWarnings(value = "")
+public final class  MyEditorFragmentComponent extends JPanel {
+
     private static final Logger LOG = Logger.getInstance(MyEditorFragmentComponent.class);
     private static final Key<WeakReference<LightweightHint>> CURRENT_HINT = Key.create("EditorFragmentComponent.currentHint");
     private static final int LINE_BORDER_THICKNESS = 1;
     private static final int EMPTY_BORDER_THICKNESS = 2;
+
+    //test
 
     private MyEditorFragmentComponent(EditorEx editor, int startLine, int endLine, boolean showFolding, boolean showGutter) {
         editor.setPurePaintingMode(true);
@@ -50,6 +59,10 @@ public final class MyEditorFragmentComponent extends JPanel {
     private void doInit(EditorEx editor, int startLine, int endLine, boolean showFolding, boolean showGutter) {
         boolean newRendering = editor instanceof EditorImpl;
         int savedScrollOffset = newRendering ? 0 : editor.getScrollingModel().getHorizontalScrollOffset();
+
+        int savedSelectionStart = editor.getSelectionModel().getSelectionStart();
+        int savedSelectionEnd = editor.getSelectionModel().getSelectionEnd();
+        editor.getSelectionModel().removeSelection();
 
         FoldingModelEx foldingModel = editor.getFoldingModel();
         boolean isFoldingEnabled = foldingModel.isFoldingEnabled();
@@ -71,10 +84,15 @@ public final class MyEditorFragmentComponent extends JPanel {
                     getWidthLimit(editor)
             );
 
+            int logicalEndLine = Math.max(endLine, startLine + 1);
+
+            // remove height of inlays like Git Author
+            int inlayHeightAfterEnd = editor.getInlayModel().getBlockElementsForVisualLine(logicalEndLine, true).stream().map(Inlay::getHeightInPixels).reduce(0, Integer::sum);
+
             Point p1 = editor.logicalPositionToXY(new LogicalPosition(startLine, 0));
-            Point p2 = editor.logicalPositionToXY(new LogicalPosition(Math.max(endLine, startLine + 1), 0));
+            Point p2 = editor.logicalPositionToXY(new LogicalPosition(logicalEndLine, 0));
             int y1 = p1.y;
-            int y2 = p2.y;
+            int y2 = p2.y - inlayHeightAfterEnd;
             textImageHeight = y2 - y1 == 0 ? editor.getLineHeight() : y2 - y1;
             LOG.assertTrue(textImageHeight > 0,
                     "Height: " + textImageHeight + "; startLine:" + startLine + "; endLine:" + endLine + "; p1:" + p1 + "; p2:" + p2);
@@ -114,6 +132,9 @@ public final class MyEditorFragmentComponent extends JPanel {
                 editor.setCaretVisible(true);
             }
         } finally {
+            if(savedSelectionStart!=0 && savedSelectionEnd != 0) {
+                editor.getSelectionModel().setSelection(savedSelectionStart, savedSelectionEnd);
+            }
             if (!showFolding) {
                 foldingModel.setFoldingEnabled(isFoldingEnabled);
             }
@@ -236,7 +257,7 @@ public final class MyEditorFragmentComponent extends JPanel {
     }
 
     @Nullable
-    public static LightweightHint showEditorFragmentHint(Editor editor, TextRange range, boolean showFolding, boolean hideByAnyKey, int yDelta) {
+    public static LightweightHint showEditorFragmentHint(Editor editor, TextRange range, boolean showFolding, boolean hideByAnyKey, int yDelta, int lineNumber) {
         if (!(editor instanceof EditorEx)) return null;
         JRootPane rootPane = editor.getComponent().getRootPane();
         if (rootPane == null) return null;
