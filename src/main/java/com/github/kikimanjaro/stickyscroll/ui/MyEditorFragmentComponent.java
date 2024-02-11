@@ -32,7 +32,6 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.lang.ref.WeakReference;
-import java.util.function.Predicate;
 
 /**
  * test
@@ -263,6 +262,7 @@ public final class  MyEditorFragmentComponent extends JPanel {
         if (rootPane == null) return null;
         JLayeredPane layeredPane = rootPane.getLayeredPane();
         int lineHeight = editor.getLineHeight();
+
         int overhang = editor.getScrollingModel().getVisibleArea().y -
                 editor.logicalPositionToXY(editor.offsetToLogicalPosition(range.getEndOffset())).y;
         int yRelative = overhang > 0 && overhang < lineHeight ?

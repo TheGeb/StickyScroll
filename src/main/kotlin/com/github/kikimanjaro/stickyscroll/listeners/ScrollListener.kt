@@ -4,14 +4,12 @@ import com.github.kikimanjaro.stickyscroll.config.StickyScrollConfigService.Comp
 import com.github.kikimanjaro.stickyscroll.marshaller.PsiParentMarshallerManager
 import com.github.kikimanjaro.stickyscroll.services.StickyPanelManager
 import com.github.kikimanjaro.stickyscroll.ui.MyEditorFragmentComponent
+import com.intellij.ide.ui.UISettings
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.event.VisibleAreaEvent
 import com.intellij.openapi.editor.event.VisibleAreaListener
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.intellij.util.ui.JBUI
-import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import java.awt.Point
 
@@ -25,6 +23,11 @@ class ScrollListener(val stickyPanelManager: StickyPanelManager) : VisibleAreaLi
     }
 
     override fun visibleAreaChanged(e: VisibleAreaEvent) {
+        // TODO: add more robust support for scrollbar dragging - this can prevent redrawing when done with scrolling
+        if (editor.scrollPane.verticalScrollBar?.valueIsAdjusting == true) {
+            return
+        }
+
         val logicalPosition = editor.xyToLogicalPosition(
             Point(
                 editor.scrollingModel.visibleArea.width, editor.scrollingModel.visibleArea.y
@@ -45,9 +48,18 @@ class ScrollListener(val stickyPanelManager: StickyPanelManager) : VisibleAreaLi
             var yDelta = 0
 
             //TODO: scroll fixing
-            editor.scrollPane
-            editor.scrollingModel
+            // user is dragging scrollbar or clicked scrollbar
+            editor.scrollPane.verticalScrollBar.valueIsAdjusting
 
+            editor.scrollPane.verticalScrollBar.baselineResizeBehavior
+            editor.scrollPane.verticalScrollBar.adjustmentListeners
+
+            editor.scrollPane
+            editor.scrollPane.verticalScrollBar.isFocusOwner
+            editor.scrollingModel
+            editor.scrollingModel.verticalScrollOffset
+
+            val settings: UISettings = UISettings.getInstance();
             if (parents != null) {
                 for (parent in parents.toList().reversed().take(ConfigInstance.state.maxLine)) {
                     val result = parentMarshaller.getTextRangeAndStartLine(parent, document)
